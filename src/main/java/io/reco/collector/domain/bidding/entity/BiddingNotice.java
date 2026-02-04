@@ -1,8 +1,12 @@
-package io.reco.collector.domain.bidding;
+package io.reco.collector.domain.bidding.entity;
 
 import io.reco.collector.common.entity.BaseTimeEntity;
-import io.reco.collector.domain.checkpoint.CrawlCheckpoint;
-import io.reco.collector.domain.organization.Organization;
+import io.reco.collector.domain.bidding.enums.BusinessType;
+import io.reco.collector.domain.bidding.enums.ContractMethod;
+import io.reco.collector.domain.bidding.enums.ParseStatus;
+import io.reco.collector.domain.bidding.enums.ProgressStatus;
+import io.reco.collector.domain.checkpoint.entity.CrawlCheckpoint;
+import io.reco.collector.domain.organization.entity.Organization;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;

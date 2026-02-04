@@ -1,4 +1,4 @@
-package io.reco.collector.domain.bidding;
+package io.reco.collector.domain.bidding.enums;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

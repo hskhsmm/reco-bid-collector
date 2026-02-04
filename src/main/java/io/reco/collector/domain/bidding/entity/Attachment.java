@@ -1,4 +1,4 @@
-package io.reco.collector.domain.bidding;
+package io.reco.collector.domain.bidding.entity;
 
 import io.reco.collector.common.entity.BaseTimeEntity;
 import jakarta.persistence.*;

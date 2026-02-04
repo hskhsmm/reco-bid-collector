@@ -1,5 +1,7 @@
-package io.reco.collector.domain.checkpoint;
+package io.reco.collector.domain.checkpoint.entity;
 
+import io.reco.collector.domain.checkpoint.enums.CrawlStatus;
+import io.reco.collector.domain.checkpoint.enums.CrawlType;
 import jakarta.persistence.*;
 import lombok.*;
 

@@ -1,4 +1,4 @@
-package io.reco.collector.domain.organization;
+package io.reco.collector.domain.organization.entity;
 
 import io.reco.collector.common.entity.BaseTimeEntity;
 import jakarta.persistence.*;

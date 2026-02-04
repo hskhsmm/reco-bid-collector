@@ -1,4 +1,4 @@
-package io.reco.collector.domain.checkpoint;
+package io.reco.collector.domain.checkpoint.enums;
 
 /**
  * 크롤링 상태
