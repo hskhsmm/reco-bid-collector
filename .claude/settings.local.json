@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:www.g2b.go.kr)",
+      "WebFetch(domain:nuri.g2b.go.kr)"
+    ]
+  }
+}

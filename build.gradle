@@ -1,0 +1,56 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '4.0.2'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'io.github.hskhsmm'
+version = '0.0.1-SNAPSHOT'
+description = 'RECO Internship Assignment: Robust Bidding Notice Collector with Checkpoint Recovery'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	compileOnly 'org.projectlombok:lombok'
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	// --- 과제 B: "제품 수준" 크롤러를 위한 핵심 추가 ---
+
+	// 1. Selenium: 누리장터의 JS 동적 렌더링 대응
+	implementation 'org.seleniumhq.selenium:selenium-java:4.18.1'
+
+	// 2. WebDriverManager: 로컬 환경 Chrome 드라이버 버전 자동 관리 (재현성 핵심)
+	implementation 'io.github.bonigarcia:webdrivermanager:5.7.0'
+
+	// 3. Spring Retry: 네트워크 에러 시 자동 재시도 로직 구현
+	implementation 'org.springframework.retry:spring-retry'
+	implementation 'org.springframework:spring-aspects'
+
+	// --- 테스트 의존성 정리 ---
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
