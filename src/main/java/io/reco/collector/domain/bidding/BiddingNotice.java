@@ -1,5 +1,6 @@
 package io.reco.collector.domain.bidding;
 
+import io.reco.collector.common.entity.BaseTimeEntity;
 import io.reco.collector.domain.checkpoint.CrawlCheckpoint;
 import io.reco.collector.domain.organization.Organization;
 import jakarta.persistence.*;
@@ -26,7 +27,7 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-public class BiddingNotice {
+public class BiddingNotice extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -104,12 +105,6 @@ public class BiddingNotice {
     @Column(name = "parse_error", columnDefinition = "TEXT")
     private String parseError;
 
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
     // === 첨부파일 (1:N): cascade로 공고 저장 시 첨부파일도 함께 저장 ===
 
     @OneToMany(mappedBy = "biddingNotice", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -127,8 +122,6 @@ public class BiddingNotice {
                 .crawlCheckpoint(checkpoint)
                 .parseStatus(ParseStatus.SUCCESS)
                 .collectedAt(LocalDateTime.now())
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
                 .build();
     }
 
@@ -137,13 +130,11 @@ public class BiddingNotice {
     public void updateParseStatus(ParseStatus status, String error) {
         this.parseStatus = status;
         this.parseError = error;
-        this.updatedAt = LocalDateTime.now();
     }
 
     public void markAsFailed(String error) {
         this.parseStatus = ParseStatus.FAILED;
         this.parseError = error;
-        this.updatedAt = LocalDateTime.now();
     }
 
     public void addAttachment(Attachment attachment) {

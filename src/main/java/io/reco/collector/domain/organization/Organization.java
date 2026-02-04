@@ -1,11 +1,10 @@
 package io.reco.collector.domain.organization;
 
+import io.reco.collector.common.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
-
-import java.time.LocalDateTime;
 
 /**
  * 기관/단지 정보 - 중복 저장 방지용 정규화 테이블
@@ -16,7 +15,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-public class Organization {
+public class Organization extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -45,19 +44,11 @@ public class Organization {
     @Column(name = "extra_info", columnDefinition = "json")
     private String extraInfo;
 
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
     // === 팩토리 메서드 ===
 
     public static Organization create(String orgName) {
         return Organization.builder()
                 .orgName(orgName)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
                 .build();
     }
 
@@ -71,6 +62,5 @@ public class Organization {
         this.deptName = deptName;
         this.managerName = managerName;
         this.extraInfo = extraInfo;
-        this.updatedAt = LocalDateTime.now();
     }
 }

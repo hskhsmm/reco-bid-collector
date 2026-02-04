@@ -7,6 +7,11 @@ import java.time.LocalDateTime;
 
 /**
  * 크롤링 체크포인트 - 중단 후 재개를 위한 상태 저장
+ *
+ * BaseTimeEntity 미사용 이유:
+ * - 다른 Entity는 created_at/updated_at (생성/수정 시각)
+ * - 이 Entity는 started_at/completed_at (시작/완료 시각)
+ * - 비즈니스 의미가 다르므로 별도 관리
  */
 @Entity
 @Table(name = "crawl_checkpoint", indexes = {

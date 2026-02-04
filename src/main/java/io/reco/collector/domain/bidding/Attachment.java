@@ -1,9 +1,8 @@
 package io.reco.collector.domain.bidding;
 
+import io.reco.collector.common.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
-
-import java.time.LocalDateTime;
 
 /**
  * 첨부파일 - 입찰공고에 첨부된 파일 정보
@@ -16,7 +15,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-public class Attachment {
+public class Attachment extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -37,9 +36,6 @@ public class Attachment {
     @Column(name = "file_size")
     private Long fileSize;
 
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
     // === 팩토리 메서드 ===
 
     public static Attachment create(String fileName, String fileUrl, Long fileSize) {
@@ -47,7 +43,6 @@ public class Attachment {
                 .fileName(fileName)
                 .fileUrl(fileUrl)
                 .fileSize(fileSize)
-                .createdAt(LocalDateTime.now())
                 .build();
     }
 }
