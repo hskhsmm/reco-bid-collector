@@ -111,4 +111,10 @@ public class CrawlCheckpoint {
     public boolean isRunning() {
         return CrawlStatus.RUNNING.equals(this.status);
     }
+
+    public void resume() {
+        this.status = CrawlStatus.RUNNING;
+        this.completedAt = null;
+        this.errorMessage = null;
+    }
 }

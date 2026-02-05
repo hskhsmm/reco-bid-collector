@@ -43,7 +43,7 @@ dependencies {
 	implementation 'io.github.bonigarcia:webdrivermanager:5.7.0'
 
 	// 3. Spring Retry: 네트워크 에러 시 자동 재시도 로직 구현
-	implementation 'org.springframework.retry:spring-retry'
+	implementation 'org.springframework.retry:spring-retry:2.0.11'
 	implementation 'org.springframework:spring-aspects'
 
 	// --- 테스트 의존성 정리 ---
