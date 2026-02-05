@@ -12,6 +12,9 @@ import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
 
+/**
+ * Selenium WebDriver 설정 - Chrome headless 브라우저 관리
+ */
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
