@@ -22,3 +22,12 @@ logging:
     root: INFO
     io.reco.collector: DEBUG
     org.hibernate.SQL: DEBUG
+
+# 크롤링 설정
+crawler:
+  headless: true
+  page-load-timeout: 30
+  implicit-wait: 10
+  request-delay: 1000
+  max-retry: 3
+  base-url: https://nuri.g2b.go.kr
