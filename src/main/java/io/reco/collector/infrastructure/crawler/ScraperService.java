@@ -18,6 +18,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 크롤링 서비스 - 전체 크롤링 흐름 조율
@@ -40,6 +41,8 @@ public class ScraperService {
     private final DetailPageParser detailPageParser;
     private final CheckpointService checkpointService;
     private final BiddingNoticeService biddingNoticeService;
+
+    private final AtomicBoolean stopRequested = new AtomicBoolean(false);
 
     /**
      * 스케줄링 크롤링 (cron 표현식으로 주기적 실행)
@@ -96,6 +99,24 @@ public class ScraperService {
             boolean hasMorePages = true;
 
             while (hasMorePages) {
+                // 중지 요청 체크 (컨트롤러에서 stop 호출 시)
+                if (stopRequested.get()) {
+                    log.warn("중지 요청 감지. 안전하게 종료합니다.");
+                    checkpointService.stopCrawl(crawlRunId);
+                    break;
+                }
+
+                // 체크포인트 상태 확인 (외부에서 STOPPED로 전환되었는지 확인)
+                checkpointService.findByRunId(crawlRunId).ifPresent(cp -> {
+                    if (!cp.isRunning()) {
+                        log.warn("체크포인트 상태가 {}로 변경되어 종료합니다.", cp.getStatus());
+                    }
+                });
+                if (checkpointService.findByRunId(crawlRunId)
+                        .map(cp -> !cp.isRunning())
+                        .orElse(false)) {
+                    break;
+                }
                 log.info("--- {}페이지 처리 중 ---", currentPage);
 
                 // 목록 파싱
@@ -108,6 +129,11 @@ public class ScraperService {
 
                 // 각 공고 처리
                 for (int i = 0; i < items.size(); i++) {
+                    if (stopRequested.get()) {
+                        log.warn("중지 요청 감지(항목 루프). 종료합니다.");
+                        checkpointService.stopCrawl(crawlRunId);
+                        break;
+                    }
                     ListPageParser.ListItem item = items.get(i);
                     String bidNoticeNo = item.getBidNoticeNo();
 
@@ -168,6 +194,7 @@ public class ScraperService {
             throw new RuntimeException("크롤링 실패", e);
 
         } finally {
+            stopRequested.set(false);
             // WebDriver 정리
             if (driver != null) {
                 try {
@@ -178,6 +205,13 @@ public class ScraperService {
                 }
             }
         }
+    }
+
+    /**
+     * 외부에서 수동 중지 요청
+     */
+    public void requestStop() {
+        stopRequested.set(true);
     }
 
     /**
