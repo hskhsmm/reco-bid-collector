@@ -137,6 +137,13 @@ public class CheckpointService {
     }
 
     /**
+     * runId로 체크포인트 조회
+     */
+    public Optional<CrawlCheckpoint> findByRunId(String crawlRunId) {
+        return checkpointRepository.findByCrawlRunId(crawlRunId);
+    }
+
+    /**
      * 실행 중인 크롤링 존재 여부
      */
     public boolean hasRunningCrawl() {
