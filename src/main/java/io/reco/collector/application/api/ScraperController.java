@@ -5,6 +5,7 @@ import io.reco.collector.domain.checkpoint.enums.CrawlType;
 import io.reco.collector.domain.checkpoint.service.CheckpointService;
 import io.reco.collector.infrastructure.crawler.ScraperService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +15,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * 크롤링 수동 실행 및 상태 관리 API
+ *
+ * - POST /start : 크롤링 시작 (FULL/INCREMENTAL, 동기/비동기)
+ * - POST /stop  : 크롤링 중지
+ * - GET /status : 현재 상태 조회
+ */
+@Slf4j
 @RestController
 @RequestMapping("/api/scrape")
 @RequiredArgsConstructor
@@ -22,6 +31,11 @@ public class ScraperController {
     private final ScraperService scraperService;
     private final CheckpointService checkpointService;
 
+    /**
+     * 크롤링 시작
+     * @param type FULL(전체) / INCREMENTAL(증분, 기본값)
+     * @param async true면 비동기 실행 (기본값), false면 완료까지 대기
+     */
     @PostMapping("/start")
     public ResponseEntity<?> start(@RequestParam(name = "type", defaultValue = "INCREMENTAL") String type,
                                    @RequestParam(name = "async", defaultValue = "true") boolean async) {
@@ -37,6 +51,9 @@ public class ScraperController {
             CompletableFuture.runAsync(() -> {
                 if (crawlType == CrawlType.FULL) scraperService.scrapeAll();
                 else scraperService.scrapeIncremental();
+            }).exceptionally(ex -> {
+                log.error("비동기 크롤링 실패: {}", ex.getMessage(), ex);
+                return null;
             });
             return ResponseEntity.status(HttpStatus.ACCEPTED)
                     .body(Map.of("message", "크롤링 시작", "type", crawlType.name()));
@@ -51,6 +68,11 @@ public class ScraperController {
         }
     }
 
+    /**
+     * 크롤링 중지 요청
+     * - 현재 진행 중인 항목 처리 완료 후 안전하게 종료
+     * - 체크포인트에 진행 상황 저장됨 (이어서 수집 가능)
+     */
     @PostMapping("/stop")
     public ResponseEntity<?> stop() {
         Optional<CrawlCheckpoint> latest = checkpointService.getLatest();
@@ -64,6 +86,11 @@ public class ScraperController {
         return ResponseEntity.ok(Map.of("message", "중지 요청됨", "runId", latest.get().getCrawlRunId()));
     }
 
+    /**
+     * 크롤링 상태 조회
+     * - 가장 최근 크롤링의 진행 상황 반환
+     * - runId, 상태, 페이지, 수집/실패 건수 등
+     */
     @GetMapping("/status")
     public ResponseEntity<?> status() {
         Optional<CrawlCheckpoint> latest = checkpointService.getLatest();
