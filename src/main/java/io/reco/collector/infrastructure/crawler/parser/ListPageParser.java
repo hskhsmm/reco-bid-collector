@@ -30,8 +30,16 @@ public class ListPageParser {
     // 검색 버튼 ID
     private static final String BTN_SEARCH_ID = "mf_wfm_container_btn00001";
 
-    // 테이블 관련
-    private static final String GRID_ID = "mf_wfm_container_grdBidPbancList";
+    // 테이블 관련 - WebSquare 그리드
+    private static final String GRID_BODY_SELECTOR = "#mf_wfm_container_grdBidPbancList_body_tbody tr";
+
+    // 컬럼 col_id 매핑
+    private static final String COL_BID_NO = "bidPbancNum";           // 입찰공고번호
+    private static final String COL_BID_NAME = "bidPbancNm";          // 입찰공고명
+    private static final String COL_NOTICE_TYPE = "prcmBsneSeCdNm";   // 공고분류 (물품/용역/공사)
+    private static final String COL_PROGRESS_STATUS = "pbancSttsGridCdNm"; // 진행상태
+    private static final String COL_ORG_NAME = "grpNm";               // 기관명
+    private static final String COL_NOTICE_DATE = "pbancPstgDt";      // 공고게시일시
 
     /**
      * 입찰공고목록 페이지로 이동
@@ -80,8 +88,7 @@ public class ListPageParser {
 
             // 결과 로드 대기 - 그리드 테이블 기준
             Thread.sleep(crawlerProperties.getRequestDelay());
-            String gridSelector = String.format("#%s table tbody tr", GRID_ID);
-            wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(gridSelector)));
+            wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(GRID_BODY_SELECTOR)));
 
             log.info("검색 완료");
 
@@ -97,9 +104,8 @@ public class ListPageParser {
         List<ListItem> items = new ArrayList<>();
 
         try {
-            // 그리드 컨테이너 안의 테이블 찾기
-            String gridSelector = String.format("#%s table tbody tr", GRID_ID);
-            List<WebElement> rows = driver.findElements(By.cssSelector(gridSelector));
+            // WebSquare 그리드 body에서 행 찾기
+            List<WebElement> rows = driver.findElements(By.cssSelector(GRID_BODY_SELECTOR));
 
             log.debug("검색 결과 행 수: {}", rows.size());
 
@@ -130,39 +136,66 @@ public class ListPageParser {
     }
 
     /**
-     * 테이블 행에서 공고 정보 추출
+     * 테이블 행에서 공고 정보 추출 (col_id 속성 기반)
      */
     private ListItem parseRow(WebElement row) {
-        List<WebElement> cells = row.findElements(By.tagName("td"));
+        // col_id 속성으로 셀 찾기
+        String bidNoticeNo = getCellTextByColId(row, COL_BID_NO);
+        String bidNoticeName = getCellTextByColId(row, COL_BID_NAME);
+        String noticeType = getCellTextByColId(row, COL_NOTICE_TYPE);
+        String progressStatus = getCellTextByColId(row, COL_PROGRESS_STATUS);
+        String orgName = getCellTextByColId(row, COL_ORG_NAME);
 
-        // 디버그: 셀 개수와 내용 확인
-        log.debug("셀 개수: {}", cells.size());
-        if (cells.size() > 1) {
-            String cell0 = getCellText(cells.get(0));
-            String cell1 = getCellText(cells.get(1));
-            log.debug("첫 번째 셀: [{}], 두 번째 셀: [{}]", cell0, cell1);
-        }
+        // 상세 페이지 링크 추출
+        String detailUrl = extractDetailUrlByColId(row, COL_BID_NAME);
 
-        if (cells.size() < 10) {
-            log.debug("셀 개수 부족으로 스킵 (필요: 10, 실제: {})", cells.size());
-            return null;
-        }
-
-        // 컬럼 순서: No, 입찰공고번호, 입찰공고명, 공고분류, 입찰방식, 진행상태, 공고종류, 계약방법, 낙찰방법, 개찰, 기관명
-        String detailUrl = extractDetailUrl(cells.get(2)); // 입찰공고명 셀에서 링크
+        log.debug("파싱: 공고번호={}, 공고명={}, 진행상태={}", bidNoticeNo, bidNoticeName, progressStatus);
 
         return ListItem.builder()
-                .bidNoticeNo(getCellText(cells.get(1)))
-                .bidNoticeName(getCellText(cells.get(2)))
-                .noticeType(getCellText(cells.get(3)))      // 공고분류
-                .bidMethod(getCellText(cells.get(4)))       // 입찰방식
-                .progressStatus(getCellText(cells.get(5)))  // 진행상태
-                .noticeKind(getCellText(cells.get(6)))      // 공고종류
-                .contractMethod(getCellText(cells.get(7)))  // 계약방법
-                .awardMethod(getCellText(cells.get(8)))     // 낙찰방법
-                .orgName(cells.size() > 10 ? getCellText(cells.get(10)) : null)
+                .bidNoticeNo(bidNoticeNo)
+                .bidNoticeName(bidNoticeName)
+                .noticeType(noticeType)
+                .progressStatus(progressStatus)
+                .orgName(orgName)
                 .detailUrl(detailUrl)
                 .build();
+    }
+
+    /**
+     * col_id 속성으로 셀 찾아서 텍스트 추출
+     */
+    private String getCellTextByColId(WebElement row, String colId) {
+        try {
+            String selector = String.format("td[col_id='%s']", colId);
+            List<WebElement> cells = row.findElements(By.cssSelector(selector));
+            if (!cells.isEmpty()) {
+                return getCellText(cells.get(0));
+            }
+        } catch (Exception e) {
+            log.debug("col_id={} 셀 찾기 실패", colId);
+        }
+        return "";
+    }
+
+    /**
+     * col_id로 셀 찾아서 링크 URL 추출
+     */
+    private String extractDetailUrlByColId(WebElement row, String colId) {
+        try {
+            String selector = String.format("td[col_id='%s'] a", colId);
+            List<WebElement> links = row.findElements(By.cssSelector(selector));
+            if (!links.isEmpty()) {
+                WebElement link = links.get(0);
+                String href = link.getAttribute("href");
+                if (href != null && !href.contains("javascript")) {
+                    return href;
+                }
+                return link.getAttribute("onclick");
+            }
+        } catch (Exception e) {
+            log.debug("상세 링크 추출 실패: col_id={}", colId);
+        }
+        return null;
     }
 
     /**
@@ -206,38 +239,19 @@ public class ListPageParser {
         return "";
     }
 
-    /**
-     * 상세 페이지 URL 또는 onclick 함수 추출
-     */
-    private String extractDetailUrl(WebElement cell) {
-        try {
-            WebElement link = cell.findElement(By.tagName("a"));
-            String href = link.getAttribute("href");
-            String onclick = link.getAttribute("onclick");
-
-            // javascript:void 면 onclick에서 정보 추출
-            if (href != null && !href.contains("javascript")) {
-                return href;
-            }
-            return onclick; // onclick 함수 반환 (나중에 처리)
-
-        } catch (Exception e) {
-            return null;
-        }
-    }
 
     /**
      * 공고명 클릭하여 상세 페이지 이동
      */
     public void clickDetail(WebDriver driver, int rowIndex) {
         try {
-            String gridSelector = String.format("#%s table tbody tr", GRID_ID);
-            List<WebElement> rows = driver.findElements(By.cssSelector(gridSelector));
+            List<WebElement> rows = driver.findElements(By.cssSelector(GRID_BODY_SELECTOR));
 
             if (rowIndex < rows.size()) {
                 WebElement row = rows.get(rowIndex);
-                // 입찰공고명 컬럼(3번째)의 링크 클릭
-                WebElement link = row.findElement(By.cssSelector("td:nth-child(3) a"));
+                // col_id='bidPbancNm' 컬럼의 링크 클릭
+                String selector = String.format("td[col_id='%s'] a", COL_BID_NAME);
+                WebElement link = row.findElement(By.cssSelector(selector));
                 link.click();
 
                 Thread.sleep(crawlerProperties.getRequestDelay());
@@ -273,20 +287,16 @@ public class ListPageParser {
     }
 
     /**
-     * 목록 아이템 DTO
+     * 목록 아이템 DTO (col_id 기반 매핑)
      */
     @lombok.Getter
     @lombok.Builder
     public static class ListItem {
-        private String bidNoticeNo;      // 입찰공고번호
-        private String bidNoticeName;    // 입찰공고명
-        private String noticeType;       // 공고분류 (변경공고, 등록공고)
-        private String bidMethod;        // 입찰방식 (전자입찰, 직찰)
-        private String progressStatus;   // 진행상태
-        private String noticeKind;       // 공고종류 (실공고, 모의공고)
-        private String contractMethod;   // 계약방법 (일반경쟁, 지명경쟁)
-        private String awardMethod;      // 낙찰방법 (적격심사제, 최저가낙찰)
-        private String orgName;          // 기관명
+        private String bidNoticeNo;      // 입찰공고번호 (bidPbancNum)
+        private String bidNoticeName;    // 입찰공고명 (bidPbancNm)
+        private String noticeType;       // 공고분류 - 물품/용역/공사 (prcmBsneSeCdNm)
+        private String progressStatus;   // 진행상태 (pbancSttsGridCdNm)
+        private String orgName;          // 기관명 (grpNm)
         private String detailUrl;        // 상세 페이지 URL 또는 onclick
     }
 }
