@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -99,17 +100,17 @@ public class ScraperController {
         }
 
         CrawlCheckpoint cp = latest.get();
-        return ResponseEntity.ok(Map.of(
-                "runId", cp.getCrawlRunId(),
-                "type", cp.getCrawlType().name(),
-                "status", cp.getStatus().name(),
-                "lastPage", cp.getLastPage(),
-                "lastNoticeNo", cp.getLastNoticeNo(),
-                "totalCollected", cp.getTotalCollected(),
-                "totalFailed", cp.getTotalFailed(),
-                "startedAt", toIso(cp.getStartedAt()),
-                "completedAt", toIso(cp.getCompletedAt())
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("runId", cp.getCrawlRunId());
+        response.put("type", cp.getCrawlType().name());
+        response.put("status", cp.getStatus().name());
+        response.put("lastPage", cp.getLastPage());
+        response.put("lastNoticeNo", cp.getLastNoticeNo());
+        response.put("totalCollected", cp.getTotalCollected());
+        response.put("totalFailed", cp.getTotalFailed());
+        response.put("startedAt", toIso(cp.getStartedAt()));
+        response.put("completedAt", toIso(cp.getCompletedAt()));
+        return ResponseEntity.ok(response);
     }
 
     private String toIso(LocalDateTime t) {
