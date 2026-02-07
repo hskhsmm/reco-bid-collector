@@ -25,7 +25,7 @@ logging:
 
 # 크롤링 설정
 crawler:
-  headless: true
+  headless: false
   page-load-timeout: 30
   implicit-wait: 10
   request-delay: 1000
