@@ -21,11 +21,6 @@ class OrganizationServiceTest {
     @Autowired
     private OrganizationRepository organizationRepository;
 
-    @BeforeEach
-    void setUp() {
-        organizationRepository.deleteAll();
-    }
-
     @Test
     @DisplayName("기관 생성 - 새 기관이면 생성")
     void 새_기관_생성() {
@@ -43,13 +38,14 @@ class OrganizationServiceTest {
     void 기존_기관_재사용() {
         // given
         Organization first = organizationService.getOrCreate("서울시청");
+        long countAfterFirst = organizationRepository.count();
 
         // when
         Organization second = organizationService.getOrCreate("서울시청");
 
         // then
         assertThat(second.getId()).isEqualTo(first.getId());
-        assertThat(organizationRepository.count()).isEqualTo(1);
+        assertThat(organizationRepository.count()).isEqualTo(countAfterFirst);
     }
 
     @Test
