@@ -420,7 +420,7 @@ try {
 
 ## 결과 산출물 예시
 
-> 전체 샘플 파일: [`docs/samples/sample-notice-detail.json`](docs/samples/sample-notice-detail.json) (상세 1건) / [`docs/samples/sample-notice-list.json`](docs/samples/sample-notice-list.json) (목록 18건)
+> 샘플 파일: [`docs/samples/sample-notice-detail.json`](docs/samples/sample-notice-detail.json) (상세 1건) / [`docs/samples/sample-notice-list.json`](docs/samples/sample-notice-list.json) (목록 18건)
 
 <details>
 <summary>수집 결과 (JSON)</summary>
