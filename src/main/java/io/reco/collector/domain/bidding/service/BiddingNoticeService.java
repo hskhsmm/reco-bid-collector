@@ -3,6 +3,7 @@ package io.reco.collector.domain.bidding.service;
 import io.reco.collector.domain.bidding.dto.BiddingNoticeDto;
 import io.reco.collector.domain.bidding.entity.Attachment;
 import io.reco.collector.domain.bidding.entity.BiddingNotice;
+import io.reco.collector.domain.bidding.enums.BusinessType;
 import io.reco.collector.domain.bidding.enums.ParseStatus;
 import io.reco.collector.domain.bidding.repository.BiddingNoticeRepository;
 import io.reco.collector.domain.checkpoint.entity.CrawlCheckpoint;
@@ -10,6 +11,8 @@ import io.reco.collector.domain.organization.entity.Organization;
 import io.reco.collector.domain.organization.service.OrganizationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -119,5 +122,37 @@ public class BiddingNoticeService {
      */
     public long countByCheckpoint(String crawlRunId) {
         return biddingNoticeRepository.findByCrawlCheckpoint_CrawlRunId(crawlRunId).size();
+    }
+
+    /**
+     * 전체 공고 페이징 조회
+     */
+    public Page<BiddingNotice> findAll(Pageable pageable) {
+        return biddingNoticeRepository.findAll(pageable);
+    }
+
+    /**
+     * 키워드 + 업무분류 복합 검색 (페이징)
+     */
+    public Page<BiddingNotice> search(String keyword, BusinessType businessType, Pageable pageable) {
+        boolean hasKeyword = keyword != null && !keyword.isBlank();
+        boolean hasType = businessType != null;
+
+        if (hasKeyword && hasType) {
+            return biddingNoticeRepository.findByBidNoticeNameContainingAndBusinessType(keyword, businessType, pageable);
+        } else if (hasKeyword) {
+            return biddingNoticeRepository.findByBidNoticeNameContaining(keyword, pageable);
+        } else if (hasType) {
+            return biddingNoticeRepository.findByBusinessType(businessType, pageable);
+        } else {
+            return biddingNoticeRepository.findAll(pageable);
+        }
+    }
+
+    /**
+     * ID로 공고 조회
+     */
+    public Optional<BiddingNotice> findById(Long id) {
+        return biddingNoticeRepository.findById(id);
     }
 }

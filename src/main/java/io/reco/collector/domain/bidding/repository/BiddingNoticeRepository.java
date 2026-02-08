@@ -4,6 +4,8 @@ import io.reco.collector.domain.bidding.entity.BiddingNotice;
 import io.reco.collector.domain.bidding.enums.BusinessType;
 import io.reco.collector.domain.bidding.enums.ParseStatus;
 import io.reco.collector.domain.bidding.enums.ProgressStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -25,6 +27,15 @@ public interface BiddingNoticeRepository extends JpaRepository<BiddingNotice, Lo
 
     // 업무분류별 조회
     List<BiddingNotice> findByBusinessType(BusinessType businessType);
+
+    // 업무분류별 페이징 조회
+    Page<BiddingNotice> findByBusinessType(BusinessType businessType, Pageable pageable);
+
+    // 공고명 키워드 검색 (페이징)
+    Page<BiddingNotice> findByBidNoticeNameContaining(String keyword, Pageable pageable);
+
+    // 공고명 키워드 + 업무분류 복합 검색 (페이징)
+    Page<BiddingNotice> findByBidNoticeNameContainingAndBusinessType(String keyword, BusinessType businessType, Pageable pageable);
 
     // 진행상태별 조회
     List<BiddingNotice> findByProgressStatus(ProgressStatus progressStatus);
