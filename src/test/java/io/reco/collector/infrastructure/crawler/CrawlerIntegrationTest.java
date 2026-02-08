@@ -120,7 +120,7 @@ class CrawlerIntegrationTest {
         Thread.sleep(2000); // 페이지 로드 대기
 
         // when
-        BiddingNoticeDto dto = detailPageParser.parseDetailPage(driver);
+        BiddingNoticeDto dto = detailPageParser.parseDetailPage(driver, null);
 
         // then
         System.out.println("\n📄 상세 파싱 결과:");
@@ -131,17 +131,28 @@ class CrawlerIntegrationTest {
             System.out.println("  - 계약방법: " + dto.getContractMethod());
             System.out.println("  - 마감일시: " + dto.getBidEndDt());
             System.out.println("  - 담당부서: " + dto.getOrgName());
+            System.out.println("  - 담당자: " + dto.getManagerName());
             System.out.println("  - 첨부파일: " + (dto.getAttachments() != null ? dto.getAttachments().size() : 0) + "개");
 
             if (dto.getAttachments() != null) {
                 for (BiddingNoticeDto.AttachmentDto att : dto.getAttachments()) {
-                    System.out.println("    - " + att.getFileName() + " (" + att.getFileSize() + " bytes)");
+                    System.out.println("    - [" + att.getDocType() + "] " + att.getFileName() + " (" + att.getFileSize() + " bytes)");
                 }
             }
+
+            // JSON 섹션별 출력
+            System.out.println("\n📦 JSON 섹션:");
+            System.out.println("  - noticeInfo: " + dto.getNoticeInfo());
+            System.out.println("  - scheduleInfo: " + dto.getScheduleInfo());
+            System.out.println("  - amountInfo: " + dto.getAmountInfo());
+            System.out.println("  - detailInfo: " + dto.getDetailInfo());
+            System.out.println("  - rawPayload 길이: " + (dto.getRawPayload() != null ? dto.getRawPayload().length() : 0) + "자");
         }
 
         assertThat(dto).isNotNull();
         assertThat(dto.getBidNoticeNo()).isNotBlank();
+        // JSON 컬럼이 실제로 채워졌는지 검증
+        assertThat(dto.getRawPayload()).isNotNull();
         System.out.println("✅ 상세 파싱 성공");
     }
 }

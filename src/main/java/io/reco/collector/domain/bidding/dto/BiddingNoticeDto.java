@@ -43,6 +43,9 @@ public class BiddingNoticeDto {
     // 메타
     private String detailUrl;
 
+    // 담당자
+    private String managerName;
+
     // 첨부파일
     private List<AttachmentDto> attachments;
 
@@ -52,5 +55,6 @@ public class BiddingNoticeDto {
         private String fileName;
         private String fileUrl;
         private Long fileSize;
+        private String docType;     // 문서명 (설계도서, 과업지시서 등)
     }
 }

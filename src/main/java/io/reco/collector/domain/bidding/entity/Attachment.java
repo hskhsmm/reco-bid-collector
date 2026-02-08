@@ -36,13 +36,17 @@ public class Attachment extends BaseTimeEntity {
     @Column(name = "file_size")
     private Long fileSize;
 
+    @Column(name = "doc_type", length = 100)
+    private String docType;
+
     // === 팩토리 메서드 ===
 
-    public static Attachment create(String fileName, String fileUrl, Long fileSize) {
+    public static Attachment create(String fileName, String fileUrl, Long fileSize, String docType) {
         return Attachment.builder()
                 .fileName(fileName)
                 .fileUrl(fileUrl)
                 .fileSize(fileSize)
+                .docType(docType)
                 .build();
     }
 }

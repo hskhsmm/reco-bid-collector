@@ -38,8 +38,11 @@ public class BiddingNoticeService {
             return Optional.empty();
         }
 
-        // 기관 조회 또는 생성
+        // 기관 조회 또는 생성 + 담당자 정보 업데이트
         Organization organization = organizationService.getOrCreate(dto.getOrgName());
+        if (dto.getManagerName() != null && !dto.getManagerName().isBlank()) {
+            organization.updateDetails(null, null, null, null, dto.getManagerName(), null);
+        }
 
         // 공고 엔티티 생성
         BiddingNotice notice = BiddingNotice.builder()
@@ -68,7 +71,8 @@ public class BiddingNoticeService {
                 Attachment attachment = Attachment.create(
                         attachmentDto.getFileName(),
                         attachmentDto.getFileUrl(),
-                        attachmentDto.getFileSize()
+                        attachmentDto.getFileSize(),
+                        attachmentDto.getDocType()
                 );
                 notice.addAttachment(attachment);
             }
