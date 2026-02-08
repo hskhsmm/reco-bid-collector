@@ -31,14 +31,21 @@ public class DetailPageParser {
 
     /**
      * 상세 페이지 파싱
+     * @param driver WebDriver
+     * @param progressStatusFromList 목록에서 가져온 진행상태 (한글)
      */
-    public BiddingNoticeDto parseDetailPage(WebDriver driver) {
+    public BiddingNoticeDto parseDetailPage(WebDriver driver, String progressStatusFromList) {
         try {
             BiddingNoticeDto.BiddingNoticeDtoBuilder builder = BiddingNoticeDto.builder();
 
             // 필수 필드
             builder.bidNoticeNo(getTextByDataTitle(driver, "입찰공고번호"))
                     .bidNoticeName(getTextByDataTitle(driver, "입찰공고명"));
+
+            // 진행상태 (목록에서 전달받음)
+            if (progressStatusFromList != null && !progressStatusFromList.isBlank()) {
+                builder.progressStatus(ProgressStatus.fromKorean(progressStatusFromList));
+            }
 
             // 분류 정보
             String businessTypeText = getTextByDataTitle(driver, "업무분류");
@@ -94,18 +101,32 @@ public class DetailPageParser {
     }
 
     /**
-     * 날짜 문자열 파싱
+     * 날짜 문자열 파싱 (여러 형식 지원)
      */
     private LocalDateTime parseDateTime(String dateStr) {
         if (dateStr == null || dateStr.isBlank()) {
             return null;
         }
         try {
-            // "2026/02/12 14:00" 형식
-            String cleaned = dateStr.replaceAll("[^0-9/: ]", "").trim();
-            if (cleaned.length() >= 16) {
+            // 숫자, /, : 만 추출
+            String cleaned = dateStr.replaceAll("[^0-9/:]", "").trim();
+
+            // "2026/02/2415:00" 형식 (공백 없이 붙어있는 경우)
+            if (cleaned.matches("\\d{4}/\\d{2}/\\d{2}\\d{2}:\\d{2}")) {
+                String formatted = cleaned.substring(0, 10) + " " + cleaned.substring(10);
+                return LocalDateTime.parse(formatted, DATE_FORMAT);
+            }
+
+            // "2026/02/24 15:00" 형식 (공백 있는 경우)
+            if (cleaned.contains(" ") && cleaned.length() >= 16) {
                 return LocalDateTime.parse(cleaned.substring(0, 16), DATE_FORMAT);
             }
+
+            // "2026/02/24" 형식 (날짜만 있는 경우) -> 00:00으로 처리
+            if (cleaned.matches("\\d{4}/\\d{2}/\\d{2}")) {
+                return LocalDateTime.parse(cleaned + " 00:00", DATE_FORMAT);
+            }
+
         } catch (Exception e) {
             log.debug("날짜 파싱 실패: {}", dateStr);
         }

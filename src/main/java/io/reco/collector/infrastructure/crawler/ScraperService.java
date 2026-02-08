@@ -146,7 +146,7 @@ public class ScraperService {
 
                         // 상세 페이지 이동 및 파싱
                         listPageParser.clickDetail(driver, i);
-                        BiddingNoticeDto dto = detailPageParser.parseDetailPage(driver);
+                        BiddingNoticeDto dto = detailPageParser.parseDetailPage(driver, item.getProgressStatus());
 
                         if (dto != null && dto.getBidNoticeNo() != null) {
                             // DB 저장
