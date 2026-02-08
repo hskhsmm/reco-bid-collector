@@ -4,6 +4,7 @@ import io.reco.collector.domain.checkpoint.entity.CrawlCheckpoint;
 import io.reco.collector.domain.checkpoint.enums.CrawlType;
 import io.reco.collector.domain.checkpoint.service.CheckpointService;
 import io.reco.collector.infrastructure.crawler.ScraperService;
+import io.reco.collector.infrastructure.crawler.config.SearchFilter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -36,11 +37,31 @@ public class ScraperController {
      * 크롤링 시작
      * @param type FULL(전체) / INCREMENTAL(증분, 기본값)
      * @param async true면 비동기 실행 (기본값), false면 완료까지 대기
+     * @param keyword 입찰공고명 검색 키워드
+     * @param businessType 공고분류 (전체/물품/용역/공사)
+     * @param progressStatus 진행상태 (전체/입찰개시/개찰완료 등)
+     * @param periodMonths 공고게시일자 기간 (1/3/6 개월)
+     * @param noticeType 공고구분 (전체/등록공고/변경공고)
      */
     @PostMapping("/start")
-    public ResponseEntity<?> start(@RequestParam(name = "type", defaultValue = "INCREMENTAL") String type,
-                                   @RequestParam(name = "async", defaultValue = "true") boolean async) {
+    public ResponseEntity<?> start(
+            @RequestParam(name = "type", defaultValue = "INCREMENTAL") String type,
+            @RequestParam(name = "async", defaultValue = "true") boolean async,
+            @RequestParam(name = "keyword", defaultValue = "") String keyword,
+            @RequestParam(name = "businessType", defaultValue = "전체") String businessType,
+            @RequestParam(name = "progressStatus", defaultValue = "전체") String progressStatus,
+            @RequestParam(name = "periodMonths", defaultValue = "1") int periodMonths,
+            @RequestParam(name = "noticeType", defaultValue = "전체") String noticeType) {
+
         CrawlType crawlType = "FULL".equalsIgnoreCase(type) ? CrawlType.FULL : CrawlType.INCREMENTAL;
+
+        SearchFilter filter = SearchFilter.builder()
+                .keyword(keyword)
+                .businessType(businessType)
+                .progressStatus(progressStatus)
+                .periodMonths(periodMonths)
+                .noticeType(noticeType)
+                .build();
 
         // 이미 실행 중이면 409 응답
         if (checkpointService.hasRunningCrawl()) {
@@ -50,17 +71,27 @@ public class ScraperController {
 
         if (async) {
             CompletableFuture.runAsync(() -> {
-                if (crawlType == CrawlType.FULL) scraperService.scrapeAll();
-                else scraperService.scrapeIncremental();
+                if (crawlType == CrawlType.FULL) scraperService.scrapeAll(filter);
+                else scraperService.scrapeIncremental(filter);
             }).exceptionally(ex -> {
                 log.error("비동기 크롤링 실패: {}", ex.getMessage(), ex);
                 return null;
             });
             return ResponseEntity.status(HttpStatus.ACCEPTED)
-                    .body(Map.of("message", "크롤링 시작", "type", crawlType.name()));
+                    .body(Map.of(
+                            "message", "크롤링 시작",
+                            "type", crawlType.name(),
+                            "filter", Map.of(
+                                    "keyword", keyword,
+                                    "businessType", businessType,
+                                    "progressStatus", progressStatus,
+                                    "periodMonths", periodMonths,
+                                    "noticeType", noticeType
+                            )
+                    ));
         } else {
-            if (crawlType == CrawlType.FULL) scraperService.scrapeAll();
-            else scraperService.scrapeIncremental();
+            if (crawlType == CrawlType.FULL) scraperService.scrapeAll(filter);
+            else scraperService.scrapeIncremental(filter);
             Optional<CrawlCheckpoint> latest = checkpointService.getLatest();
             return ResponseEntity.ok(Map.of(
                     "message", "크롤링 완료",

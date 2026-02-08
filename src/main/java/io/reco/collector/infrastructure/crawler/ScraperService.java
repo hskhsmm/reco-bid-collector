@@ -6,6 +6,7 @@ import io.reco.collector.domain.checkpoint.entity.CrawlCheckpoint;
 import io.reco.collector.domain.checkpoint.enums.CrawlType;
 import io.reco.collector.domain.checkpoint.service.CheckpointService;
 import io.reco.collector.infrastructure.crawler.config.CrawlerProperties;
+import io.reco.collector.infrastructure.crawler.config.SearchFilter;
 import io.reco.collector.infrastructure.crawler.config.WebDriverConfig;
 import io.reco.collector.infrastructure.crawler.parser.DetailPageParser;
 import io.reco.collector.infrastructure.crawler.parser.ListPageParser;
@@ -58,25 +59,40 @@ public class ScraperService {
      * 전체 크롤링 실행
      */
     public void scrapeAll() {
-        scrape(CrawlType.FULL);
+        scrape(CrawlType.FULL, SearchFilter.defaults());
+    }
+
+    public void scrapeAll(SearchFilter filter) {
+        scrape(CrawlType.FULL, filter);
     }
 
     /**
      * 증분 크롤링 실행
      */
     public void scrapeIncremental() {
-        scrape(CrawlType.INCREMENTAL);
+        scrape(CrawlType.INCREMENTAL, SearchFilter.defaults());
+    }
+
+    public void scrapeIncremental(SearchFilter filter) {
+        scrape(CrawlType.INCREMENTAL, filter);
     }
 
     /**
-     * 메인 크롤링 로직
+     * 메인 크롤링 로직 (기본 필터)
+     */
+    public void scrape(CrawlType crawlType) {
+        scrape(crawlType, SearchFilter.defaults());
+    }
+
+    /**
+     * 메인 크롤링 로직 - 검색 필터 지원
      */
     @Retryable(
             retryFor = {Exception.class},
             maxAttempts = 3,
             backoff = @Backoff(delay = 5000, multiplier = 2)
     )
-    public void scrape(CrawlType crawlType) {
+    public void scrape(CrawlType crawlType, SearchFilter filter) {
         WebDriver driver = null;
         CrawlCheckpoint checkpoint = null;
 
@@ -90,9 +106,9 @@ public class ScraperService {
             // 2. WebDriver 생성
             driver = webDriverConfig.createWebDriver();
 
-            // 3. 목록 페이지 이동
+            // 3. 목록 페이지 이동 + 필터 적용 검색
             listPageParser.navigateToListPage(driver);
-            listPageParser.search(driver);
+            listPageParser.search(driver, filter);
 
             // 4. 페이지 순회하며 크롤링
             int currentPage = checkpoint.getLastPage() > 0 ? checkpoint.getLastPage() : 1;
@@ -128,6 +144,7 @@ public class ScraperService {
                 }
 
                 // 각 공고 처리
+                int newCount = 0;
                 for (int i = 0; i < items.size(); i++) {
                     if (stopRequested.get()) {
                         log.warn("중지 요청 감지(항목 루프). 종료합니다.");
@@ -152,6 +169,7 @@ public class ScraperService {
                             // DB 저장
                             biddingNoticeService.saveIfNotExists(dto, checkpoint);
                             checkpointService.incrementCollected(crawlRunId);
+                            newCount++;
                             log.info("저장 완료: {} - {}", dto.getBidNoticeNo(), dto.getBidNoticeName());
                         }
 
@@ -171,6 +189,12 @@ public class ScraperService {
 
                     // 진행 상황 업데이트 (매 항목마다)
                     checkpointService.updateProgress(crawlRunId, currentPage, bidNoticeNo);
+                }
+
+                // 이 페이지에서 신규 건이 0이면 더 이상 새 데이터 없음 → 종료
+                if (newCount == 0 && !items.isEmpty()) {
+                    log.info("{}페이지에서 신규 건 없음 (전부 중복). 크롤링 종료.", currentPage);
+                    break;
                 }
 
                 // 다음 페이지 이동
