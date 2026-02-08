@@ -54,13 +54,16 @@ public class Organization extends BaseTimeEntity {
 
     // === 상태 변경 메서드 ===
 
+    /**
+     * 기관 상세정보 업데이트 - null이 아닌 값만 덮어씀 (기존 값 보존)
+     */
     public void updateDetails(String address, String contact, String homepage,
                               String deptName, String managerName, String extraInfo) {
-        this.address = address;
-        this.contact = contact;
-        this.homepage = homepage;
-        this.deptName = deptName;
-        this.managerName = managerName;
-        this.extraInfo = extraInfo;
+        if (address != null) this.address = address;
+        if (contact != null) this.contact = contact;
+        if (homepage != null) this.homepage = homepage;
+        if (deptName != null) this.deptName = deptName;
+        if (managerName != null) this.managerName = managerName;
+        if (extraInfo != null) this.extraInfo = extraInfo;
     }
 }
