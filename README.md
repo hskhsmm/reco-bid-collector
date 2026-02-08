@@ -2,7 +2,11 @@
 
 누리장터(nuri.g2b.go.kr) 입찰공고를 자동 수집하는 크롤러입니다.
 
-동적으로 렌더링되는 WebSquare SPA 페이지에서 목록 탐색 → 상세 진입 → 필드 추출 → DB 저장까지 자동화합니다.
+동적으로 렌더링되는 WebSquare SPA 페이지에서 목록 탐색 → 상세 진입 → 필드 추출 → DB 저장까지 자동화하며,
+비개발직군도 브라우저만으로 수집 제어 및 결과 확인이 가능한 **웹 UI**를 제공합니다.
+
+<!-- 전체 화면 스크린샷 -->
+![대시보드 스크린샷](docs/screenshots/dashboard.png)
 
 ---
 
@@ -41,21 +45,17 @@ docker compose up -d
 
 > Selenium이 로컬 Chrome을 직접 제어하므로, 앱은 Docker가 아닌 로컬에서 실행해야 합니다.
 
-### 3. 크롤링 시작
+### 3. 웹 UI 접속
 
-```bash
-# 전체 수집
-curl -X POST "http://localhost:8080/api/scrape/start?type=FULL&async=true"
+브라우저에서 `http://localhost:8080`으로 접속합니다.
 
-# 필터 적용 수집 (예: 환경 관련 용역 공고)
-curl -X POST "http://localhost:8080/api/scrape/start?type=FULL&async=true&keyword=환경&businessType=용역"
+| 페이지 | URL | 설명 |
+|--------|-----|------|
+| 대시보드 | `/` | 수집 시작/중지, 실시간 상태 확인, 최근 수집 공고 미리보기 |
+| 공고 목록 | `/notices` | 키워드 검색 + 업무분류 필터 + 페이징 |
+| 공고 상세 | `/notices/{id}` | 기본정보, JSON 섹션별 테이블, 첨부파일 목록 |
 
-# 진행 상황 확인
-curl http://localhost:8080/api/scrape/status
-
-# 수동 중지
-curl -X POST http://localhost:8080/api/scrape/stop
-```
+> REST API도 그대로 사용 가능합니다 (아래 [API](#api) 섹션 참조)
 
 ### 4. 환경 변수 (선택)
 
@@ -69,20 +69,83 @@ SPRING_DATASOURCE_PASSWORD=reco1234
 
 ---
 
+## 웹 UI
+
+### 왜 프론트엔드를 만들었는가
+
+이 프로젝트의 최종 사용자는 **개발자가 아닌 영업/마케팅 등 비개발직군**입니다.
+REST API만으로는 Postman이나 curl 없이 사용할 수 없으므로, 브라우저만으로 크롤링 제어와 결과 확인이 가능한 웹 UI가 필수적이었습니다.
+
+**기술 선택 근거:**
+
+| 고려사항 | 선택 | 이유 |
+|----------|------|------|
+| 렌더링 방식 | Thymeleaf SSR + JS fetch 하이브리드 | 페이지 로드는 서버에서 HTML 완성, 실시간 갱신만 클라이언트에서 처리 |
+| 스타일링 | Bootstrap 5 CDN | Node.js/webpack 등 빌드 도구 불필요 |
+| 배포 구조 | Spring Boot 단일 JAR | 프론트/백 분리 배포 없이 서버 하나로 운영 |
+
+React/Vue 같은 SPA는 3페이지짜리 관리 도구에 과하므로, **적정 기술**로 Thymeleaf를 선택했습니다.
+
+### 대시보드
+
+수집 조건을 설정하고 시작 버튼을 누르면 자동으로 수집이 진행됩니다.
+
+<!-- 대시보드 수집 중 스크린샷 -->
+![대시보드 - 수집 중](docs/screenshots/dashboard-running.png)
+
+- **수집 조건 설정**: 키워드, 업무분류(물품/용역/공사), 수집 방식(새 공고만/전체)
+- **실시간 상태 카드**: 상태, 수집 건수, 실패 건수, 소요 시간 (5초 간격 자동 갱신)
+- **최근 수집 공고**: 수집되는 공고가 실시간으로 테이블에 추가됨
+- **버튼 상태 전환**: 수집 시작 → "수집 중..." → 완료 시 "수집 시작"으로 자동 복귀
+
+### 공고 목록
+
+<!-- 공고 목록 스크린샷 -->
+![공고 목록](docs/screenshots/notices-list.png)
+
+- **키워드 검색**: 공고명에 포함된 텍스트로 검색
+- **업무분류 필터**: 물품/용역/공사 드롭다운 선택
+- **페이징**: Spring Data Page 기반, 한 페이지 20건
+
+### 공고 상세
+
+<!-- 공고 상세 스크린샷 -->
+![공고 상세](docs/screenshots/notices-detail.png)
+
+- **기본 정보**: 공고번호, 업무분류, 진행상태, 계약방법, 기관명, 공고일, 마감일
+- **JSON 섹션**: 공고정보, 일정정보, 금액정보, 상세정보를 각각 key-value 테이블로 렌더링
+- **첨부파일**: 파일명, 문서유형, 파일크기 목록
+
+---
+
 ## 프로젝트 구조
 
 ```
 src/main/java/io/reco/collector/
-├── application/api/              # REST API (ScraperController, GlobalExceptionHandler)
-├── common/entity/                # BaseTimeEntity (JPA Auditing)
-├── config/                       # JPA 설정
+├── application/
+│   ├── api/                         # REST API (ScraperController, GlobalExceptionHandler)
+│   └── web/                         # 웹 UI (ViewController)
+├── common/entity/                   # BaseTimeEntity (JPA Auditing)
+├── config/                          # JPA 설정
 ├── domain/
-│   ├── bidding/                  # 입찰공고 (Entity, Service, Repository, DTO, Enum)
-│   ├── checkpoint/               # 크롤링 체크포인트 (중단점 복구)
-│   └── organization/             # 기관 정보 (정규화)
-└── infrastructure/crawler/       # 크롤링 인프라
-    ├── config/                   # WebDriver, CrawlerProperties, SearchFilter
-    └── parser/                   # ListPageParser, DetailPageParser
+│   ├── bidding/                     # 입찰공고 (Entity, Service, Repository, DTO, Enum)
+│   ├── checkpoint/                  # 크롤링 체크포인트 (중단점 복구)
+│   └── organization/                # 기관 정보 (정규화)
+└── infrastructure/crawler/          # 크롤링 인프라
+    ├── config/                      # WebDriver, CrawlerProperties, SearchFilter
+    └── parser/                      # ListPageParser, DetailPageParser
+
+src/main/resources/
+├── templates/                       # Thymeleaf 템플릿
+│   ├── layout.html                  # 공통 레이아웃 (네비바, 푸터)
+│   ├── dashboard.html               # 대시보드
+│   └── notices/
+│       ├── list.html                # 공고 목록
+│       └── detail.html              # 공고 상세
+├── static/
+│   ├── css/style.css                # 커스텀 스타일
+│   └── js/dashboard.js              # 크롤링 제어 JS (폴링, 실시간 갱신)
+└── application.yml
 ```
 
 ---
@@ -92,16 +155,18 @@ src/main/java/io/reco/collector/
 ### 아키텍처
 
 ```
-[API 요청] → ScraperController → ScraperService (크롤링 조율)
-                                      │
-                       ┌──────────────┼──────────────┐
-                       ▼              ▼              ▼
-                 ListPageParser  DetailPageParser  CheckpointService
-                 (목록 탐색)    (상세 파싱)       (중단점 관리)
-                       │              │              │
-                       └──────────────┼──────────────┘
-                                      ▼
-                              BiddingNoticeService → MariaDB
+[브라우저] → ViewController (Thymeleaf SSR) → BiddingNoticeService → MariaDB
+               │
+               └→ JavaScript fetch (CSR) → ScraperController (REST API)
+                                                    │
+                                     ┌──────────────┼──────────────┐
+                                     ▼              ▼              ▼
+                               ListPageParser  DetailPageParser  CheckpointService
+                               (목록 탐색)    (상세 파싱)       (중단점 관리)
+                                     │              │              │
+                                     └──────────────┼──────────────┘
+                                                    ▼
+                                            BiddingNoticeService → MariaDB
 ```
 
 ### 핵심 설계 결정
@@ -140,6 +205,16 @@ JavaScript 렌더링이 완료된 후에야 DOM에 데이터가 존재하므로 
 // WebSquare 컴포넌트에 직접 값 설정
 js.executeScript("$w.getComponentById('cboBusinessType').setValue('" + value + "')");
 ```
+
+**5. SSR + CSR 하이브리드 UI**
+
+| 구분 | 방식 | 대상 |
+|------|------|------|
+| SSR (Thymeleaf) | 서버에서 HTML 완성 후 응답 | 페이지 최초 로드 (목록, 상세) |
+| CSR (JavaScript fetch) | 클라이언트에서 JSON 받아 DOM 업데이트 | 대시보드 실시간 갱신 (상태, 공고 목록) |
+
+페이지 3개짜리 관리 도구에 React/Vue SPA는 과하므로,
+Thymeleaf SSR로 기본 구조를 잡고 **실시간 필요한 부분만 JS 폴링으로 CSR 처리**했습니다.
 
 ### 주요 가정
 
@@ -194,6 +269,14 @@ try {
 
 **해결**: 한 페이지에서 신규 수집 건수가 0이면(전부 중복) 자동 종료
 
+### 5. 비동기 크롤링 시작 후 UI 상태 불일치
+
+**증상**: 수집 시작 버튼을 눌러도 중지 버튼이 활성화되지 않음
+
+**원인**: 크롤링은 비동기(202 ACCEPTED)로 시작되지만, 체크포인트가 생성되기 전에 첫 상태 폴링이 이전 크롤링의 COMPLETED 상태를 가져와서 UI가 "완료" 상태로 되돌아감
+
+**해결**: 시작 성공 시 즉시 UI를 "수집 중" 상태로 전환하고, 3초 후부터 폴링을 시작하여 체크포인트 생성 시간을 확보
+
 ---
 
 ## API
@@ -203,6 +286,7 @@ try {
 | POST | `/api/scrape/start` | 크롤링 시작 | `type` (FULL/INCREMENTAL), `async`, `keyword`, `businessType`, `progressStatus`, `periodMonths`, `noticeType` |
 | POST | `/api/scrape/stop` | 크롤링 중지 | - |
 | GET | `/api/scrape/status` | 진행 상황 조회 | - |
+| GET | `/api/notices/recent` | 최근 수집 공고 10건 | - |
 
 **응답 예시** (`/api/scrape/status`):
 ```json
@@ -405,8 +489,10 @@ try {
 |------|------|------|-----------|
 | Language | Java | 21 | Spring 생태계 활용, Virtual Thread 등 최신 기능 지원 |
 | Framework | Spring Boot | 4.0.2 | DI/AOP/스케줄링/비동기 등 엔터프라이즈 기능을 최소 설정으로 사용 |
+| 템플릿 엔진 | Thymeleaf | - | SSR 기반 웹 UI, Spring Boot 단일 JAR 배포 유지 |
 | ORM | Spring Data JPA + Hibernate | - | 반복적인 CRUD 코드 제거, 엔티티 기반 스키마 자동 관리 |
 | DB | MariaDB | 10.6+ | JSON 컬럼 네이티브 지원, MySQL 호환으로 범용성 확보 |
+| UI | Bootstrap 5 | CDN | 빌드 도구 없이 반응형 레이아웃, 개발 속도 우선 |
 | 크롤링 | Selenium WebDriver | 4.18.1 | 아래 [Selenium vs Playwright](#selenium-vs-playwright) 참조 |
 | 드라이버 관리 | WebDriverManager | 5.7.0 | Chrome 버전에 맞는 ChromeDriver를 자동 감지/다운로드 |
 | 재시도 | Spring Retry | 2.0.11 | `@Retryable` 선언만으로 exponential backoff 재시도 적용 |
@@ -432,13 +518,15 @@ try {
 
 | 기능 | 설명 |
 |------|------|
+| 웹 UI | 비개발직군도 브라우저에서 수집 제어 및 결과 확인 가능 |
+| 실시간 대시보드 | 5초 간격 폴링으로 수집 상태/건수/최근 공고 자동 갱신 |
+| 검색/필터 | 공고명 키워드 + 업무분류 드롭다운 조합 검색 |
 | 체크포인트 복구 | 오류 중단 후 재실행 시 마지막 지점부터 이어서 수집 |
 | 스케줄링 | `@Scheduled(cron)` 기반 주기 실행 (기본: 매일 02:00) |
-| 검색 필터 | 키워드, 공고분류, 진행상태, 기간, 공고종류 조합 |
 | 중복 방지 | 공고번호 unique 제약 + 수집 전 존재 여부 확인 |
 | 재시도 | `@Retryable` 네트워크 오류 시 자동 재시도 (최대 3회, exponential backoff) |
-| 비동기 실행 | `async=true` 옵션으로 논블로킹 크롤링 |
-| 수동 중지 | `/api/scrape/stop`으로 안전한 중지 (현재 공고 처리 완료 후 종료) |
+| 비동기 실행 | 수집 시작 시 논블로킹으로 즉시 응답, 백그라운드에서 크롤링 진행 |
+| 수동 중지 | 중지 버튼으로 안전한 종료 (현재 공고 처리 완료 후 종료) |
 
 ---
 
@@ -451,15 +539,16 @@ try {
 - **headless 모드 미검증**: 현재 headless=false로 실행 (Chrome 창이 표시됨)
 - **메모리**: 장시간 크롤링 시 Chrome 프로세스 메모리 누적 가능
 - **금액 데이터 한계**: 배정예산/기준금액 등 일부 필드가 원본에서 단위("원")만 표시되는 경우, 원본 그대로 저장 (후처리로 정제 가능)
+- **첨부파일 다운로드**: 나라장터 첨부파일이 JavaScript onclick 방식이라 직접 다운로드 링크 제공이 제한적
 
 ### 개선 아이디어
 
 - **병렬 크롤링**: 여러 브라우저 인스턴스로 페이지별 병렬 처리
 - **Playwright 전환**: Selenium 대비 메모리 효율과 안정성 개선
 - **알림 기능**: 신규 공고 수집 시 Slack/이메일 알림
-- **결과 내보내기**: CSV/Excel 다운로드 API
-- **대시보드**: 수집 현황 시각화 웹 UI
+- **결과 내보내기**: CSV/Excel 다운로드 기능
 - **Docker**: 컨테이너화로 Chrome 포함 원클릭 배포
+- **WebSocket**: 현재 5초 폴링을 WebSocket으로 대체하여 실시간성 향상
 
 ---
 
