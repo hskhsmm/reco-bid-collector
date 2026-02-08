@@ -25,11 +25,6 @@ class CheckpointServiceTest {
     @Autowired
     private CrawlCheckpointRepository checkpointRepository;
 
-    @BeforeEach
-    void setUp() {
-        checkpointRepository.deleteAll();
-    }
-
     @Test
     @DisplayName("새 크롤링 시작 - 정상 케이스")
     void 새_크롤링_시작_성공() {
