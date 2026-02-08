@@ -1,6 +1,8 @@
 package io.reco.collector.infrastructure.crawler.parser;
 
 import io.reco.collector.infrastructure.crawler.config.CrawlerProperties;
+import lombok.Builder;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.*;
@@ -28,7 +30,7 @@ public class ListPageParser {
     private static final String MENU_BID_LIST_ID = "mf_wfm_gnb_wfm_gnbMenu_genDepth1_1_genDepth2_0_genDepth3_0_btn_menuLvl3";
 
     // 검색 버튼 ID
-    private static final String BTN_SEARCH_ID = "mf_wfm_container_btn00001";
+    private static final String BTN_SEARCH_ID = "mf_wfm_container_btnS0001";
 
     // 테이블 관련 - WebSquare 그리드
     private static final String GRID_BODY_SELECTOR = "#mf_wfm_container_grdBidPbancList_body_tbody tr";
@@ -289,8 +291,8 @@ public class ListPageParser {
     /**
      * 목록 아이템 DTO (col_id 기반 매핑)
      */
-    @lombok.Getter
-    @lombok.Builder
+    @Getter
+    @Builder
     public static class ListItem {
         private String bidNoticeNo;      // 입찰공고번호 (bidPbancNum)
         private String bidNoticeName;    // 입찰공고명 (bidPbancNm)

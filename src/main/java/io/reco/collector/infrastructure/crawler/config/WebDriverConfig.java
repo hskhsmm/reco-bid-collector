@@ -42,12 +42,13 @@ public class WebDriverConfig {
         options.addArguments("--disable-gpu");
         options.addArguments("--window-size=1920,1080");
 
+        // Selenium 봇 감지 회피 (핵심!)
+        options.addArguments("--disable-blink-features=AutomationControlled");
+        options.setExperimentalOption("excludeSwitches", new String[]{"enable-automation"});
+        options.setExperimentalOption("useAutomationExtension", false);
+
         // User-Agent 설정 (봇 차단 우회)
         options.addArguments("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-
-        // 불필요한 리소스 차단 (속도 향상)
-        options.addArguments("--disable-images");
-        options.addArguments("--blink-settings=imagesEnabled=false");
 
         return options;
     }
