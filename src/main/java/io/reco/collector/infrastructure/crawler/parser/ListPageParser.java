@@ -247,6 +247,9 @@ public class ListPageParser {
      */
     public void clickDetail(WebDriver driver, int rowIndex) {
         try {
+            // 팝업이 클릭을 가로챌 수 있으므로 먼저 닫기
+            closePopups(driver);
+
             List<WebElement> rows = driver.findElements(By.cssSelector(GRID_BODY_SELECTOR));
 
             if (rowIndex < rows.size()) {
@@ -261,6 +264,44 @@ public class ListPageParser {
             }
         } catch (Exception e) {
             log.error("상세 페이지 이동 실패: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 누리장터 팝업(공지사항 등) 닫기
+     * - pop_contents 클래스 팝업의 닫기 버튼 클릭
+     * - 팝업이 없으면 무시
+     */
+    private void closePopups(WebDriver driver) {
+        try {
+            List<WebElement> closeButtons = driver.findElements(
+                    By.cssSelector("div.pop_contents button.btn_close, div.pop_contents .close, div.pop_contents [title='닫기']"));
+            for (WebElement btn : closeButtons) {
+                try {
+                    if (btn.isDisplayed()) {
+                        btn.click();
+                        log.debug("팝업 닫기 완료");
+                        Thread.sleep(300);
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+
+            // 닫기 버튼을 못 찾으면 JavaScript로 팝업 div 숨기기
+            List<WebElement> popups = driver.findElements(By.cssSelector("div.pop_contents"));
+            for (WebElement popup : popups) {
+                try {
+                    if (popup.isDisplayed()) {
+                        ((JavascriptExecutor) driver).executeScript(
+                                "arguments[0].closest('.w2window, .w2popup, div[style*=\"z-index\"]').style.display='none'",
+                                popup);
+                        log.debug("팝업 JavaScript로 숨김 처리");
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+        } catch (Exception e) {
+            log.debug("팝업 닫기 시도 중 예외 (무시): {}", e.getMessage());
         }
     }
 
