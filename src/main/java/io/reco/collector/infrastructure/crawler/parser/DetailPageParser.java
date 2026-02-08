@@ -12,7 +12,10 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.Select;
+import org.openqa.selenium.support.ui.WebDriverWait;
 import org.springframework.stereotype.Component;
+
+import java.time.Duration;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -71,7 +74,14 @@ public class DetailPageParser {
      * @param progressStatusFromList 목록에서 가져온 진행상태 (한글)
      */
     public BiddingNoticeDto parseDetailPage(WebDriver driver, String progressStatusFromList) {
+        // implicit wait를 0으로 설정하여 findElements 지연 방지
+        // (셀마다 select/span 탐색 시 10초씩 대기하는 문제 해결)
+        driver.manage().timeouts().implicitlyWait(Duration.ZERO);
         try {
+            // 상세 페이지 핵심 요소(입찰공고번호) 출현 대기
+            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(crawlerProperties.getPageLoadTimeout()));
+            wait.until(d -> !d.findElements(By.cssSelector("td[data-title='입찰공고번호']")).isEmpty());
+
             BiddingNoticeDto.BiddingNoticeDtoBuilder builder = BiddingNoticeDto.builder();
 
             // 1. 페이지 전체 td[data-title] 필드 일괄 추출
@@ -146,6 +156,9 @@ public class DetailPageParser {
         } catch (Exception e) {
             log.error("상세 페이지 파싱 실패: {}", e.getMessage());
             return null;
+        } finally {
+            // implicit wait 복원
+            driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(crawlerProperties.getImplicitWait()));
         }
     }
 
@@ -155,7 +168,7 @@ public class DetailPageParser {
     public void goBackToList(WebDriver driver) {
         try {
             driver.navigate().back();
-            Thread.sleep(crawlerProperties.getRequestDelay());
+            Thread.sleep(2000);
         } catch (Exception e) {
             log.warn("목록 복귀 실패: {}", e.getMessage());
         }

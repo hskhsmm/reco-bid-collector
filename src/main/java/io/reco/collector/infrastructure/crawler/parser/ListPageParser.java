@@ -1,6 +1,7 @@
 package io.reco.collector.infrastructure.crawler.parser;
 
 import io.reco.collector.infrastructure.crawler.config.CrawlerProperties;
+import io.reco.collector.infrastructure.crawler.config.SearchFilter;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -73,13 +74,56 @@ public class ListPageParser {
     }
 
     /**
-     * 검색 실행
+     * 검색 실행 (기본 필터)
      */
     public void search(WebDriver driver) {
+        search(driver, SearchFilter.defaults());
+    }
+
+    /**
+     * 검색 실행 - 필터 조건을 폼에 입력한 뒤 검색
+     *
+     * 누리장터 WebSquare 폼은 JavaScript로 값을 설정해야 정상 반영된다.
+     * - input: wfm_container 접두사 + 필드ID 패턴
+     * - select/combobox: WebSquare API setValue() 호출
+     * - 기간 버튼: 1개월/3개월/6개월 클릭
+     */
+    public void search(WebDriver driver, SearchFilter filter) {
         try {
             WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(crawlerProperties.getImplicitWait()));
+            JavascriptExecutor js = (JavascriptExecutor) driver;
 
-            // 검색 버튼 클릭 시도 (없으면 이미 데이터 로드된 상태일 수 있음)
+            // 1. 입찰공고명 키워드 입력
+            if (filter.getKeyword() != null && !filter.getKeyword().isBlank()) {
+                setInputValue(js, "mf_wfm_container_tbxBidPbancNm", filter.getKeyword());
+                log.debug("키워드 입력: {}", filter.getKeyword());
+            }
+
+            // 2. 공고분류 (물품/용역/공사/전체) - w2selectbox
+            if (!"전체".equals(filter.getBusinessType())) {
+                setSelectBoxByText(js, "mf_wfm_container_sbxBsneClsf", filter.getBusinessType());
+                log.debug("공고분류 설정: {}", filter.getBusinessType());
+            }
+
+            // 3. 진행상태 (입찰개시/개찰완료/전체) - w2selectbox
+            if (!"전체".equals(filter.getProgressStatus())) {
+                setSelectBoxByText(js, "mf_wfm_container_sbxPrgrsStts", filter.getProgressStatus());
+                log.debug("진행상태 설정: {}", filter.getProgressStatus());
+            }
+
+            // 4. 공고구분 (등록공고/변경공고/전체) - w2selectbox
+            if (!"전체".equals(filter.getNoticeType())) {
+                setSelectBoxByText(js, "mf_wfm_container_tbxPbancKndCd", filter.getNoticeType());
+                log.debug("공고구분 설정: {}", filter.getNoticeType());
+            }
+
+            // 5. 공고게시일자 기간 버튼 (1개월/3개월/6개월)
+            if (filter.getPeriodMonths() != 1) {
+                clickPeriodButton(driver, filter.getPeriodMonths());
+                log.debug("기간 설정: {}개월", filter.getPeriodMonths());
+            }
+
+            // 6. 검색 버튼 클릭
             try {
                 WebElement searchBtn = wait.until(ExpectedConditions.elementToBeClickable(By.id(BTN_SEARCH_ID)));
                 searchBtn.click();
@@ -88,14 +132,80 @@ public class ListPageParser {
                 log.warn("검색 버튼 못 찾음 - 이미 데이터가 로드된 상태일 수 있음: {}", e.getMessage());
             }
 
-            // 결과 로드 대기 - 그리드 테이블 기준
+            // 결과 로드 대기
             Thread.sleep(crawlerProperties.getRequestDelay());
             wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(GRID_BODY_SELECTOR)));
 
-            log.info("검색 완료");
+            log.info("검색 완료 (필터: keyword={}, businessType={}, progressStatus={}, period={}개월)",
+                    filter.getKeyword(), filter.getBusinessType(),
+                    filter.getProgressStatus(), filter.getPeriodMonths());
 
         } catch (Exception e) {
             log.error("검색 실패: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * WebSquare input에 값 설정 - WebSquare API 사용
+     */
+    private void setInputValue(JavascriptExecutor js, String elementId, String value) {
+        js.executeScript(
+                "var comp = $w.getComponentById(arguments[0]);" +
+                "if(comp && comp.setValue) { comp.setValue(arguments[1]); }" +
+                "else {" +
+                "  var el = document.getElementById(arguments[0]);" +
+                "  if(el) { el.value = arguments[1]; " +
+                "    el.dispatchEvent(new Event('change', {bubbles:true})); }" +
+                "}",
+                elementId, value);
+    }
+
+    /**
+     * w2selectbox에 텍스트 기반으로 값 설정 - WebSquare API 사용
+     * - getItemCount/getItemText로 option 순회
+     * - setSelectedIndex로 선택 (내부 상태 동기화)
+     */
+    private void setSelectBoxByText(JavascriptExecutor js, String elementId, String displayText) {
+        js.executeScript(
+                "var comp = $w.getComponentById(arguments[0]);" +
+                "if(comp && comp.getItemCount) {" +
+                "  for(var i=0; i<comp.getItemCount(); i++) {" +
+                "    if(comp.getItemText(i).trim() === arguments[1]) {" +
+                "      comp.setSelectedIndex(i); break;" +
+                "    }" +
+                "  }" +
+                "} else {" +
+                "  var sel = document.getElementById(arguments[0]);" +
+                "  if(sel) {" +
+                "    for(var i=0; i<sel.options.length; i++) {" +
+                "      if(sel.options[i].text.trim() === arguments[1]) {" +
+                "        sel.selectedIndex = i;" +
+                "        sel.dispatchEvent(new Event('change', {bubbles:true}));" +
+                "        break;" +
+                "      }" +
+                "    }" +
+                "  }" +
+                "}",
+                elementId, displayText);
+    }
+
+    /**
+     * 기간 버튼 클릭 (1개월/3개월/6개월)
+     */
+    private void clickPeriodButton(WebDriver driver, int months) {
+        try {
+            // 버튼 텍스트로 찾기: "1개월", "3개월", "6개월"
+            String buttonText = months + "개월";
+            List<WebElement> buttons = driver.findElements(
+                    By.xpath("//button[contains(text(),'" + buttonText + "')] | //a[contains(text(),'" + buttonText + "')]"));
+            if (!buttons.isEmpty()) {
+                buttons.get(0).click();
+                Thread.sleep(500);
+            } else {
+                log.debug("기간 버튼 미발견: {}", buttonText);
+            }
+        } catch (Exception e) {
+            log.debug("기간 버튼 클릭 실패: {}", e.getMessage());
         }
     }
 
@@ -259,7 +369,8 @@ public class ListPageParser {
                 WebElement link = row.findElement(By.cssSelector(selector));
                 link.click();
 
-                Thread.sleep(crawlerProperties.getRequestDelay());
+                // SPA 페이지 전환 대기 (parseDetailPage에서 요소 출현 대기함)
+                Thread.sleep(2000);
                 log.debug("상세 페이지 이동: row {}", rowIndex);
             }
         } catch (Exception e) {
@@ -306,17 +417,35 @@ public class ListPageParser {
     }
 
     /**
-     * 다음 페이지로 이동
+     * 다음 페이지로 이동 (WebSquare pagelist 컴포넌트)
      * @return 다음 페이지 존재 여부
      */
     public boolean goToNextPage(WebDriver driver, int currentPage) {
         try {
-            // 페이지 번호 링크 찾기
-            String nextPageSelector = String.format("a[onclick*='%d']", currentPage + 1);
-            WebElement nextPageLink = driver.findElement(By.cssSelector(nextPageSelector));
-            nextPageLink.click();
+            // WebSquare pagelist의 "다음" 버튼
+            WebElement nextBtn = driver.findElement(By.id("mf_wfm_container_pagelist_next_btn"));
+
+            // 버튼이 비활성화(disabled) 상태이면 마지막 페이지
+            String classList = nextBtn.getAttribute("class");
+            if (classList != null && classList.contains("disabled")) {
+                log.info("마지막 페이지: {}", currentPage);
+                return false;
+            }
+
+            // a 태그를 찾아서 클릭 (LI 안에 a가 있음)
+            List<WebElement> links = nextBtn.findElements(By.tagName("a"));
+            if (!links.isEmpty()) {
+                links.get(0).click();
+            } else {
+                nextBtn.click();
+            }
 
             Thread.sleep(crawlerProperties.getRequestDelay());
+
+            // 그리드 로드 대기
+            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(crawlerProperties.getImplicitWait()));
+            wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(GRID_BODY_SELECTOR)));
+
             log.debug("{}페이지로 이동", currentPage + 1);
             return true;
 
