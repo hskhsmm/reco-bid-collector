@@ -1,0 +1,48 @@
+/* 업무분류 배지 색상 */
+.badge-construction {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+.badge-service {
+    background-color: #0d6efd;
+    color: #fff;
+}
+
+.badge-goods {
+    background-color: #198754;
+    color: #fff;
+}
+
+/* 상태 배지 */
+.status-running {
+    background-color: #0d6efd;
+}
+
+.status-completed {
+    background-color: #198754;
+}
+
+.status-failed {
+    background-color: #dc3545;
+}
+
+.status-stopped {
+    background-color: #ffc107;
+    color: #000;
+}
+
+/* 카드 헤더 강조 */
+.card-header {
+    font-weight: 600;
+}
+
+/* 테이블 th 너비 고정 */
+.table th.table-light {
+    white-space: nowrap;
+}
+
+/* 푸터 하단 고정 */
+.footer {
+    margin-top: auto;
+}
