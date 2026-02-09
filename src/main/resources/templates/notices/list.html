@@ -94,14 +94,12 @@
                 <a class="page-link"
                    th:href="@{/notices(page=${notices.number - 1}, keyword=${keyword}, businessType=${businessType})}">이전</a>
             </li>
-            <th:block th:with="start=${T(Math).max(0, notices.number - 4)}, end=${T(Math).min(notices.totalPages - 1, notices.number + 4)}">
-                <li class="page-item" th:each="i : ${#numbers.sequence(start, end)}"
-                    th:classappend="${i == notices.number ? 'active' : ''}">
-                    <a class="page-link"
-                       th:href="@{/notices(page=${i}, keyword=${keyword}, businessType=${businessType})}"
-                       th:text="${i + 1}">1</a>
-                </li>
-            </th:block>
+            <li class="page-item" th:each="i : ${#numbers.sequence(0, notices.totalPages - 1)}"
+                th:classappend="${i == notices.number ? 'active' : ''}">
+                <a class="page-link"
+                   th:href="@{/notices(page=${i}, keyword=${keyword}, businessType=${businessType})}"
+                   th:text="${i + 1}">1</a>
+            </li>
             <li class="page-item" th:classappend="${notices.last ? 'disabled' : ''}">
                 <a class="page-link"
                    th:href="@{/notices(page=${notices.number + 1}, keyword=${keyword}, businessType=${businessType})}">다음</a>
