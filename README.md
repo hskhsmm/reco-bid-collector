@@ -254,10 +254,10 @@ implicit wait가 10초로 설정되어 있어 `<select>`가 없는 셀마다 **1
 ```java
 driver.manage().timeouts().implicitlyWait(Duration.ZERO);
 try {
-    // 파싱 로직 (findElements가 즉시 반환)
-} finally {
-    driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
-}
+        // 파싱 로직 (findElements가 즉시 반환)
+        } finally {
+        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
+        }
 ```
 
 ### 2. WebSquare 팝업이 클릭을 가로챔
