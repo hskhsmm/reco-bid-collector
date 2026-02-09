@@ -25,7 +25,7 @@
 
 ```bash
 # Docker Compose로 MariaDB 실행 (권장)
-docker compose up -d
+docker compose up -d --build
 ```
 
 > 직접 MariaDB를 설치한 경우:
