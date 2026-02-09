@@ -16,10 +16,12 @@
 
 | 항목 | 버전 | 비고 |
 |------|------|------|
+| Docker | 최신 | `docker --version`으로 확인 |
 | Java | 21+ | `java -version`으로 확인 |
-| MariaDB | 10.6+ | MySQL 8.0+ 호환 가능 |
 | Chrome | 120+ | Selenium이 자동 제어 |
 | Gradle | 9.3 | wrapper 포함 (별도 설치 불필요) |
+
+> **Windows 사용자**: **Git Bash** 환경에서 실행하는 것을 권장합니다. CMD/PowerShell에서는 일부 스크립트가 정상 동작하지 않을 수 있습니다.
 
 ### 1. DB 실행
 
@@ -28,7 +30,18 @@
 docker compose up -d --build
 ```
 
-> 직접 MariaDB를 설치한 경우:
+> **⚠ 포트 충돌 주의**: 로컬에 이미 MariaDB/MySQL이 실행 중이면 **3306 포트가 충돌**합니다.
+> 기존 서비스를 중지하거나, `docker-compose.yml`에서 포트를 변경하는 것이 좋습니다:
+> ```yaml
+> ports:
+>   - "3307:3306"  # 호스트 포트를 3307로 변경
+> ```
+> 포트를 변경한 경우 `application.yml`의 DB 접속 URL도 함께 변경해야 합니다:
+> ```
+> SPRING_DATASOURCE_URL=jdbc:mariadb://localhost:3307/bidding_collector
+> ```
+
+> 직접 MariaDB를 설치한 경우 (Docker 없이):
 > ```sql
 > CREATE DATABASE bidding_collector CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 > CREATE USER 'reco'@'localhost' IDENTIFIED BY 'reco1234';
@@ -42,6 +55,8 @@ docker compose up -d --build
 ```bash
 ./gradlew bootRun
 ```
+
+또는 IntelliJ IDEA에서 `CollectorApplication`의 ▶ 버튼을 클릭하여 실행할 수도 있습니다.
 
 > Selenium이 로컬 Chrome을 직접 제어하므로, 앱은 Docker가 아닌 로컬에서 실행해야 합니다.
 
@@ -420,7 +435,7 @@ try {
 
 ## 결과 산출물 예시
 
-> 샘플 파일: [`docs/samples/sample-notice-detail.json`](docs/samples/sample-notice-detail.json) (상세 1건) / [`docs/samples/sample-notice-list.json`](docs/samples/sample-notice-list.json) (목록 18건)
+> 전체 샘플 파일: [`docs/samples/sample-notice-detail.json`](docs/samples/sample-notice-detail.json) (상세 1건) / [`docs/samples/sample-notice-list.json`](docs/samples/sample-notice-list.json) (목록 18건)
 
 <details>
 <summary>수집 결과 (JSON)</summary>
